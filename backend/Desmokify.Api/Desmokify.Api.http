@@ -1,0 +1,6 @@
+@Desmokify.Api_HostAddress = http://localhost:5068
+
+GET {{Desmokify.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
