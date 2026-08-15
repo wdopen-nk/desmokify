@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Desmokify.Api/Desmokify.Api.csproj" />
+  <Project Path="Desmokify.Application/Desmokify.Application.csproj" />
+  <Project Path="Desmokify.Domain/Desmokify.Domain.csproj" />
+  <Project Path="Desmokify.Infrastructure/Desmokify.Infrastructure.csproj" />
+</Solution>
