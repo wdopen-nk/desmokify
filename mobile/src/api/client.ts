@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
 const API_URL =
-  "https://accepted-minority-servers-recently.trycloudflare.com";
+  "https://cedar-targets-iowa-gazette.trycloudflare.com"
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -48,26 +48,34 @@ export async function apiRequest<T>(
     );
 
     if (!response.ok) {
-      if (response.status === 401) {
-          throw new Error("UNAUTHORIZED");
-      }
-
       let message = "Something went wrong.";
 
-      try {
+      if (response.status === 401) {
+        message = "UNAUTHORIZED";
+      } 
+      
+      else if (response.status === 404) {
+        message = "NOT_FOUND";
+      } 
+      
+      else if (response.status === 409) {
+        message = "CONFLICT";
+      } 
+      
+      else {
+        try {
           const data = JSON.parse(text);
 
           if (data.message) {
-              message = data.message;
+            message = data.message;
           }
-      } 
-      
-      catch {
+        } catch {
           // Response wasn't JSON.
+        }
       }
 
       throw new Error(message);
-  }
+    }
 
     return text
       ? JSON.parse(text)
