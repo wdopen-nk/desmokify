@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  StyleSheet,
   View,
 } from "react-native";
 
@@ -19,6 +20,8 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
 
+import { colors } from "../theme/colors";
+
 type RootStackParamList = {
   Home: undefined;
   Welcome: undefined;
@@ -34,46 +37,129 @@ export default function AppNavigator() {
 
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      theme={{
+        dark: true,
+        colors: {
+          primary: colors.primary,
+          background: colors.background,
+          card: colors.background,
+          text: colors.text,
+          border: colors.border,
+          notification: colors.primary,
+        },
+        fonts: {
+          regular: {
+            fontFamily: "System",
+            fontWeight: "400",
+          },
+          medium: {
+            fontFamily: "System",
+            fontWeight: "500",
+          },
+          bold: {
+            fontFamily: "System",
+            fontWeight: "700",
+          },
+          heavy: {
+            fontFamily: "System",
+            fontWeight: "800",
+          },
+        },
+      }}
+    >
       {user ? (
-        <Stack.Navigator>
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: colors.background,
+            },
+
+            headerTintColor: colors.text,
+
+            headerTitleStyle: {
+              fontWeight: "700",
+            },
+
+            contentStyle: {
+              backgroundColor: colors.background,
+            },
+
+            headerShadowVisible: false,
+          }}
+        >
           <Stack.Screen
             name="Home"
             component={HomeScreen}
+            options={{
+              headerShown: false,
+            }}
           />
         </Stack.Navigator>
       ) : (
-        <Stack.Navigator>
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: colors.background,
+            },
+
+            headerTintColor: colors.text,
+
+            headerTitleStyle: {
+              fontWeight: "700",
+            },
+
+            contentStyle: {
+              backgroundColor: colors.background,
+            },
+
+            headerShadowVisible: false,
+          }}
+        >
           <Stack.Screen
             name="Welcome"
             component={WelcomeScreen}
-            options={{ headerShown: false }}
+            options={{
+              headerShown: false,
+            }}
           />
 
           <Stack.Screen
             name="Login"
             component={LoginScreen}
+            options={{
+              title: "Login",
+            }}
           />
 
           <Stack.Screen
             name="Register"
             component={RegisterScreen}
+            options={{
+              title: "Create account",
+            }}
           />
         </Stack.Navigator>
       )}
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.background,
+  },
+});

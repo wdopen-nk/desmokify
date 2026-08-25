@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
+
 import {
   ActivityIndicator,
-  Alert,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,15 +12,21 @@ import {
 
 import { getQuitPlan } from "../api/quitPlans";
 import { QuitPlan } from "../types/quitPlan";
+
+import Card from "../components/Card";
 import CreateQuitPlanScreen from "./CreateQuitPlanScreen";
+
+import { colors } from "../theme/colors";
+import { spacing } from "../theme/spacing";
 
 export default function HomeScreen() {
   const [quitPlan, setQuitPlan] =
     useState<QuitPlan | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
 
-  const [showCreatePlan, setShowCreatePlan] =
+  const [showEditPlan, setShowEditPlan] =
     useState(false);
 
   useEffect(() => {
@@ -31,174 +38,321 @@ export default function HomeScreen() {
       const plan = await getQuitPlan();
 
       setQuitPlan(plan);
-    } 
-    
-    catch (error) {
-      if (error instanceof Error && 
-        error.message == "NOT FOUND") 
-      {
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "NOT_FOUND"
+      ) {
         setQuitPlan(null);
-      } 
-      
-      else {
-        console.error(
-          "Failed to load quit plan:",
-          error
-        );
-
-        Alert.alert(
-          "Error",
-          "Unable to load your quit plan."
-        );
+      } else {
+        console.error(error);
       }
-    } 
-    
-    finally {
+    } finally {
       setLoading(false);
     }
-    
   };
 
+  /*
+   * Initial loading state
+   */
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
       </SafeAreaView>
     );
   }
 
-  if (!quitPlan || showCreatePlan) {
+  /*
+   * No quit plan exists yet.
+   *
+   * This is CREATE mode.
+   */
+  if (!quitPlan) {
     return (
       <CreateQuitPlanScreen
+        editMode={false}
         onPlanCreated={() => {
-          setShowCreatePlan(false);
           loadQuitPlan();
         }}
       />
     );
   }
 
+  /*
+   * User is editing an existing quit plan.
+   *
+   * This is EDIT mode.
+   */
+  if (showEditPlan) {
+    return (
+      <CreateQuitPlanScreen
+        editMode={true}
+        onPlanCreated={() => {
+          setShowEditPlan(false);
+          loadQuitPlan();
+        }}
+      />
+    );
+  }
+
+  /*
+   * Display the quit plan dashboard.
+   */
+
+  const quitDate = new Date(
+    quitPlan.quitDate
+  ).toLocaleDateString();
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>
-          Your smoke-free journey 🚭
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.brand}>
+              DESMOKIFY
+            </Text>
+
+            <Text style={styles.greeting}>
+              Your journey starts here.
+            </Text>
+          </View>
+
+          <View style={styles.status}>
+            <Text style={styles.statusIcon}>
+              🚭
+            </Text>
+          </View>
+        </View>
+
+        {/* Quit date */}
+        <View style={styles.hero}>
+          <Text style={styles.heroLabel}>
+            QUIT DATE
+          </Text>
+
+          <Text style={styles.heroDate}>
+            {quitDate}
+          </Text>
+
+          <Text style={styles.heroText}>
+            One day at a time. You've got this.
+          </Text>
+        </View>
+
+        {/* Plan statistics */}
+        <Text style={styles.sectionTitle}>
+          Your plan
         </Text>
 
-        <Text style={styles.subtitle}>
-          Your quit plan is ready.
-        </Text>
+        <View style={styles.statsGrid}>
+          <Card>
+            <Text style={styles.statIcon}>
+              🚬
+            </Text>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            Quit date
-          </Text>
+            <Text style={styles.statValue}>
+              {quitPlan.cigarettesPerDay}
+            </Text>
 
-          <Text style={styles.cardValue}>
-            {new Date(
-              quitPlan.quitDate
-            ).toLocaleDateString()}
-          </Text>
+            <Text style={styles.statLabel}>
+              cigarettes/day
+            </Text>
+          </Card>
+
+          <Card>
+            <Text style={styles.statIcon}>
+              📦
+            </Text>
+
+            <Text style={styles.statValue}>
+              {quitPlan.cigarettesPerPack}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              cigarettes/pack
+            </Text>
+          </Card>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            Cigarettes per day
-          </Text>
+        {/* Price */}
+        <Card>
+          <View style={styles.priceRow}>
+            <View>
+              <Text style={styles.statLabel}>
+                Price per pack
+              </Text>
 
-          <Text style={styles.cardValue}>
-            {quitPlan.cigarettesPerDay}
-          </Text>
-        </View>
+              <Text style={styles.price}>
+                {quitPlan.packPrice}
+              </Text>
+            </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            Cigarettes per pack
-          </Text>
+            <Text style={styles.moneyIcon}>
+              💰
+            </Text>
+          </View>
+        </Card>
 
-          <Text style={styles.cardValue}>
-            {quitPlan.cigarettesPerPack}
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            Pack price
-          </Text>
-
-          <Text style={styles.cardValue}>
-            {quitPlan.packPrice}
-          </Text>
-        </View>
-
+        {/* Edit */}
         <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => setShowCreatePlan(true)}
+          style={styles.editButton}
+          onPress={() => setShowEditPlan(true)}
+          activeOpacity={0.7}
         >
-          <Text style={styles.secondaryButtonText}>
+          <Text style={styles.editButtonText}>
             Edit quit plan
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
 
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: colors.background,
   },
 
   content: {
-    padding: 24,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
 
-  title: {
-    fontSize: 28,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xl,
+  },
+
+  brand: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 3,
+  },
+
+  greeting: {
+    color: colors.text,
+    fontSize: 24,
     fontWeight: "700",
-    marginBottom: 8,
+    marginTop: 8,
   },
 
-  subtitle: {
-    fontSize: 16,
-    color: "#666666",
-    marginBottom: 24,
+  status: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surfaceLight,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  card: {
+  statusIcon: {
+    fontSize: 23,
+  },
+
+  hero: {
+    backgroundColor: colors.surfaceLight,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 12,
-    padding: 16,
+    borderColor: colors.border,
+    borderRadius: 22,
+    padding: 24,
+    marginBottom: spacing.xl,
+  },
+
+  heroLabel: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+
+  heroDate: {
+    color: colors.text,
+    fontSize: 32,
+    fontWeight: "800",
+    marginTop: 8,
+  },
+
+  heroText: {
+    color: colors.textSecondary,
+    fontSize: 15,
+    marginTop: 10,
+  },
+
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: spacing.md,
+  },
+
+  statsGrid: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+
+  statIcon: {
+    fontSize: 22,
     marginBottom: 12,
   },
 
-  cardTitle: {
+  statValue: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: "800",
+  },
+
+  statLabel: {
+    color: colors.textSecondary,
     fontSize: 14,
-    color: "#666666",
-    marginBottom: 6,
+    marginTop: 4,
   },
 
-  cardValue: {
-    fontSize: 20,
-    fontWeight: "600",
-  },
-
-  secondaryButton: {
-    marginTop: 12,
-    paddingVertical: 14,
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
 
-  secondaryButtonText: {
-    fontSize: 16,
+  price: {
+    color: colors.primary,
+    fontSize: 26,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+
+  moneyIcon: {
+    fontSize: 30,
+  },
+
+  editButton: {
+    marginTop: spacing.lg,
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+
+  editButtonText: {
+    color: colors.textSecondary,
+    fontSize: 15,
     fontWeight: "600",
   },
 });

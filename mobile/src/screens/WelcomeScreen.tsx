@@ -1,6 +1,7 @@
 import React from "react";
+
 import {
-  Button,
+  SafeAreaView,
   StyleSheet,
   Text,
   View,
@@ -9,6 +10,11 @@ import {
 import type {
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
+
+import Button from "../components/Button";
+
+import { colors } from "../theme/colors";
+import { spacing } from "../theme/spacing";
 
 type RootStackParamList = {
   Welcome: undefined;
@@ -25,58 +31,137 @@ export default function WelcomeScreen({
   navigation,
 }: Props) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        Desmokify
-      </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
 
-      <Text style={styles.subtitle}>
-        Your journey to a smoke-free life
-        starts today.
-      </Text>
+        <View style={styles.hero}>
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>
+              🚭
+            </Text>
+          </View>
 
-      <View style={styles.button}>
-        <Button
-          title="Create account"
-          onPress={() =>
-            navigation.navigate("Register")
-          }
-        />
+          <Text style={styles.brand}>
+            DESMOKIFY
+          </Text>
+
+          <Text style={styles.title}>
+            Your smoke-free{"\n"}
+            <Text style={styles.green}>
+              journey starts today.
+            </Text>
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Small steps. Real progress.
+            {"\n"}
+            A healthier future starts with
+            one decision.
+          </Text>
+        </View>
+
+        <View style={styles.actions}>
+          <Button
+            title="Create account"
+            onPress={() =>
+              navigation.navigate("Register")
+            }
+          />
+
+          <View style={styles.secondaryButton}>
+            <Button
+              title="I already have an account"
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate("Login")
+              }
+            />
+          </View>
+        </View>
+
+        <Text style={styles.footer}>
+          One day at a time. 🌱
+        </Text>
+
       </View>
-
-      <View style={styles.button}>
-        <Button
-          title="I already have an account"
-          onPress={() =>
-            navigation.navigate("Login")
-          }
-        />
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+
   container: {
     flex: 1,
+    padding: spacing.lg,
+    justifyContent: "space-between",
+  },
+
+  hero: {
+    flex: 1,
     justifyContent: "center",
-    padding: 24,
+    alignItems: "center",
+  },
+
+  iconContainer: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xl,
+  },
+
+  icon: {
+    fontSize: 38,
+  },
+
+  brand: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 4,
+    marginBottom: spacing.lg,
   },
 
   title: {
-    fontSize: 42,
-    fontWeight: "bold",
+    color: colors.text,
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "800",
     textAlign: "center",
-    marginBottom: 16,
+  },
+
+  green: {
+    color: colors.primary,
   },
 
   subtitle: {
-    fontSize: 18,
+    color: colors.textSecondary,
+    fontSize: 16,
+    lineHeight: 25,
     textAlign: "center",
-    marginBottom: 40,
+    marginTop: spacing.lg,
   },
 
-  button: {
-    marginVertical: 8,
+  actions: {
+    marginBottom: spacing.lg,
+  },
+
+  secondaryButton: {
+    marginTop: spacing.md,
+  },
+
+  footer: {
+    color: colors.textMuted,
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: spacing.sm,
   },
 });

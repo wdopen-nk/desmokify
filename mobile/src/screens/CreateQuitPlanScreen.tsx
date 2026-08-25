@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
 import {
   Alert,
   KeyboardAvoidingView,
@@ -7,31 +8,123 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { createQuitPlan } from "../api/quitPlans";
+
+import {
+  createQuitPlan,
+  getQuitPlan,
+  updateQuitPlan,
+} from "../api/quitPlans";
+
+import Button from "../components/Button";
+import Input from "../components/Input";
+
+import { colors } from "../theme/colors";
+import { spacing } from "../theme/spacing";
 
 interface Props {
   onPlanCreated: () => void;
+  editMode?: boolean;
+}
+
+function parseQuitDate(dateString: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(
+    dateString.trim()
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  const date = new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day
+    )
+  );
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
 export default function CreateQuitPlanScreen({
   onPlanCreated,
+  editMode = false,
 }: Props) {
   const [quitDate, setQuitDate] = useState("");
   const [cigarettesPerDay, setCigarettesPerDay] =
     useState("");
-
   const [cigarettesPerPack, setCigarettesPerPack] =
     useState("");
-
   const [packPrice, setPackPrice] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(
+    editMode
+  );
 
-  const handleCreatePlan = async () => {
+  useEffect(() => {
+    if (!editMode) {
+      return;
+    }
+
+    async function loadPlan() {
+      try {
+        const plan = await getQuitPlan();
+
+        const date = new Date(plan.quitDate);
+
+        const formattedDate =
+          `${date.getUTCFullYear()}-` +
+          `${String(
+            date.getUTCMonth() + 1
+          ).padStart(2, "0")}-` +
+          `${String(
+            date.getUTCDate()
+          ).padStart(2, "0")}`;
+
+        setQuitDate(formattedDate);
+
+        setCigarettesPerDay(
+          String(plan.cigarettesPerDay)
+        );
+
+        setCigarettesPerPack(
+          String(plan.cigarettesPerPack)
+        );
+
+        setPackPrice(
+          String(plan.packPrice)
+        );
+      } catch (error) {
+        Alert.alert(
+          "Unable to load plan",
+          error instanceof Error
+            ? error.message
+            : "Something went wrong."
+        );
+      } finally {
+        setLoadingPlan(false);
+      }
+    }
+
+    loadPlan();
+  }, [editMode]);
+
+  const handleSubmit = async () => {
     if (
       !quitDate ||
       !cigarettesPerDay ||
@@ -68,45 +161,59 @@ export default function CreateQuitPlanScreen({
       return;
     }
 
-    const date = new Date(quitDate);
+    const date = parseQuitDate(quitDate);
 
-    if (Number.isNaN(date.getTime())) {
+    if (!date) {
       Alert.alert(
         "Invalid date",
-        "Please use the format YYYY-MM-DD."
+        "Please use a valid date in YYYY-MM-DD format."
       );
 
       return;
     }
 
+    const request = {
+      quitDate: date.toISOString(),
+      cigarettesPerDay: cigarettesDayNumber,
+      cigarettesPerPack: cigarettesPackNumber,
+      packPrice: packPriceNumber,
+    };
+
     try {
       setLoading(true);
 
-      await createQuitPlan({
-        quitDate: date.toISOString(),
-        cigarettesPerDay: cigarettesDayNumber,
-        cigarettesPerPack: cigarettesPackNumber,
-        packPrice: packPriceNumber,
-      });
+      if (editMode) {
+        await updateQuitPlan(request);
 
-      Alert.alert(
-        "Plan created! 🎉",
-        "Your smoke-free journey starts now.",
-        [
-          {
-            text: "Continue",
-            onPress: onPlanCreated,
-          },
-        ]
-      );
+        Alert.alert(
+          "Plan updated 🚭",
+          "Your quit plan has been updated.",
+          [
+            {
+              text: "Done",
+              onPress: onPlanCreated,
+            },
+          ]
+        );
+      } else {
+        await createQuitPlan(request);
+
+        Alert.alert(
+          "Plan created 🚭",
+          "Your smoke-free journey starts now!",
+          [
+            {
+              text: "Let's go",
+              onPress: onPlanCreated,
+            },
+          ]
+        );
+      }
     } catch (error) {
-      console.error(
-        "Create quit plan failed:",
-        error
-      );
-
       Alert.alert(
-        "Unable to create plan",
+        editMode
+          ? "Unable to update plan"
+          : "Unable to create plan",
         error instanceof Error
           ? error.message
           : "Something went wrong."
@@ -115,6 +222,18 @@ export default function CreateQuitPlanScreen({
       setLoading(false);
     }
   };
+
+  if (loadingPlan) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>
+            Loading your quit plan...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -129,86 +248,77 @@ export default function CreateQuitPlanScreen({
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>
-            Create your quit plan 🚭
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Let's understand your current smoking
-            habits so we can track your progress.
-          </Text>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Quit date
+          <View style={styles.header}>
+            <Text style={styles.brand}>
+              DESMOKIFY
             </Text>
 
-            <TextInput
-              style={styles.input}
+            <Text style={styles.title}>
+              {editMode
+                ? "Update your"
+                : "Let's build your"}
+              {"\n"}
+              <Text style={styles.green}>
+                smoke-free future.
+              </Text>
+            </Text>
+
+            <Text style={styles.subtitle}>
+              {editMode
+                ? "Update your smoking habits and quit date to keep your progress accurate."
+                : "Tell us a little about your current smoking habits. We'll use this to track your progress."}
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            <Input
+              label="Quit date"
               placeholder="YYYY-MM-DD"
               value={quitDate}
               onChangeText={setQuitDate}
               autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="numbers-and-punctuation"
             />
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Cigarettes per day
-            </Text>
-
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Cigarettes per day"
               placeholder="e.g. 10"
               value={cigarettesPerDay}
               onChangeText={setCigarettesPerDay}
               keyboardType="numeric"
             />
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Cigarettes per pack
-            </Text>
-
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Cigarettes per pack"
               placeholder="e.g. 20"
               value={cigarettesPerPack}
               onChangeText={setCigarettesPerPack}
               keyboardType="numeric"
             />
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Price per pack
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 5.50"
+            <Input
+              label="Price per pack"
+              placeholder="e.g. 8.00"
               value={packPrice}
               onChangeText={setPackPrice}
               keyboardType="decimal-pad"
             />
-          </View>
 
-          <TouchableOpacity
-            style={[
-              styles.button,
-              loading && styles.buttonDisabled,
-            ]}
-            onPress={handleCreatePlan}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading
-                ? "Creating..."
-                : "Create my quit plan"}
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <Button
+                title={
+                  editMode
+                    ? "Update my quit plan"
+                    : "Create my quit plan"
+                }
+                onPress={handleSubmit}
+                loading={loading}
+              />
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -218,7 +328,7 @@ export default function CreateQuitPlanScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
 
   container: {
@@ -226,57 +336,58 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 24,
-    paddingTop: 40,
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+
+  header: {
+    marginBottom: spacing.xl,
+  },
+
+  brand: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 3,
+    marginBottom: spacing.lg,
   },
 
   title: {
-    fontSize: 30,
-    fontWeight: "700",
-    marginBottom: 12,
+    color: colors.text,
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: "800",
+  },
+
+  green: {
+    color: colors.primary,
   },
 
   subtitle: {
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 24,
-    color: "#666666",
-    marginBottom: 32,
+    marginTop: spacing.md,
   },
 
-  field: {
-    marginBottom: 20,
+  form: {
+    marginTop: spacing.sm,
   },
 
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+  buttonContainer: {
+    marginTop: spacing.sm,
   },
 
-  input: {
-    borderWidth: 1,
-    borderColor: "#cccccc",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-
-  button: {
-    marginTop: 12,
-    backgroundColor: "#222222",
-    paddingVertical: 16,
-    borderRadius: 10,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
+    padding: spacing.lg,
   },
 
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  buttonText: {
-    color: "#ffffff",
+  loadingText: {
+    color: colors.textSecondary,
     fontSize: 16,
-    fontWeight: "600",
   },
 });
