@@ -12,6 +12,7 @@ public class DesmokifyDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<QuitPlan> QuitPlans => Set<QuitPlan>();
+    public DbSet<DailyCheckIn> DailyCheckIns => Set<DailyCheckIn>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
@@ -30,6 +31,20 @@ public class DesmokifyDbContext : DbContext
 
         modelBuilder.Entity<QuitPlan>()
             .HasIndex(q => q.UserId)
+            .IsUnique();
+
+        modelBuilder.Entity<DailyCheckIn>()
+            .HasOne(d => d.User)
+            .WithMany()
+            .HasForeignKey(d => d.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<DailyCheckIn>()
+            .HasIndex(d => new
+            {
+                d.UserId,
+                d.Date
+            })
             .IsUnique();
     }
 }

@@ -19,6 +19,7 @@ builder.Services.AddDbContext<DesmokifyDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IQuitPlanService, QuitPlanService>();
+builder.Services.AddScoped<IDailyCheckInService, DailyCheckInService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
