@@ -8,18 +8,23 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert
 } from "react-native";
 
 import { getQuitPlan } from "../api/quitPlans";
 import { QuitPlan } from "../types/quitPlan";
 
+import { useAuth } from "../context/AuthContext";
+
 import Card from "../components/Card";
-import CreateQuitPlanScreen from "./CreateQuitPlanScreen";
+import CreateQuitPlanScreen from "./QuitPlanScreen";
 
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 
 export default function HomeScreen() {
+  const { logout } = useAuth();
+
   const [quitPlan, setQuitPlan] =
     useState<QuitPlan | null>(null);
 
@@ -51,6 +56,39 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Log out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Log out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              console.error(
+                "Logout failed:",
+                error
+              );
+
+              Alert.alert(
+                "Logout failed",
+                "Something went wrong while logging out."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
 
   /*
    * Initial loading state
@@ -211,6 +249,16 @@ export default function HomeScreen() {
             Edit quit plan
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.logoutButtonText}>
+            Log out
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -352,6 +400,18 @@ const styles = StyleSheet.create({
 
   editButtonText: {
     color: colors.textSecondary,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  logoutButton: {
+  marginTop: spacing.sm,
+  alignItems: "center",
+  paddingVertical: 14,
+  },
+
+  logoutButtonText: {
+    color: "#FF6B6B",
     fontSize: 15,
     fontWeight: "600",
   },

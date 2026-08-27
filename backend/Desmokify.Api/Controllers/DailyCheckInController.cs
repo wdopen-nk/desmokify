@@ -92,4 +92,26 @@ public class DailyCheckInsController
 
         return userId;
     }
+
+    [HttpGet("statistics")]
+    public async Task<IActionResult> GetStatistics()
+    {
+        var userId = GetUserId();
+
+        try
+        {
+            var statistics =
+                await _dailyCheckInService
+                    .GetStatisticsAsync(userId);
+
+            return Ok(statistics);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new
+            {
+                message = ex.Message
+            });
+        }
+    }
 }

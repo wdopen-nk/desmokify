@@ -12,4 +12,8 @@ public interface IDailyCheckInService
     Task<DailyCheckInResponse?> GetTodayAsync(
         int userId
     );
+
+    Task<DailyCheckInStatisticsResponse> GetStatisticsAsync(
+        int userId
+    );
 }
