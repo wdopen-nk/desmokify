@@ -1,4 +1,9 @@
 import React, { useEffect, useState } from "react";
+import {
+  NavigationProp,
+  useNavigation,
+} from "@react-navigation/native";
+
 
 import {
   ActivityIndicator,
@@ -11,8 +16,12 @@ import {
   Alert
 } from "react-native";
 
+import { getTodayCheckIn } from "../api/dailyCheckIns";
 import { getQuitPlan } from "../api/quitPlans";
+
 import { QuitPlan } from "../types/quitPlan";
+import { DailyCheckIn } from "../types/dailyCheckIn";
+
 
 import { useAuth } from "../context/AuthContext";
 
@@ -22,11 +31,23 @@ import CreateQuitPlanScreen from "./QuitPlanScreen";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
 
+type HomeNavigationParamList = {
+  DailyCheckIn: undefined;
+};
+
 export default function HomeScreen() {
   const { logout } = useAuth();
+  const navigation =
+    useNavigation<NavigationProp<HomeNavigationParamList>>();
 
   const [quitPlan, setQuitPlan] =
     useState<QuitPlan | null>(null);
+
+  const [todayCheckIn, setTodayCheckIn] =
+  useState<DailyCheckIn | null>(null);
+
+  const [checkInLoading, setCheckInLoading] =
+    useState(true);
 
   const [loading, setLoading] =
     useState(true);
@@ -36,6 +57,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadQuitPlan();
+    loadTodayCheckIn();
   }, []);
 
   const loadQuitPlan = async () => {
@@ -54,6 +76,34 @@ export default function HomeScreen() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTodayCheckIn = async () => {
+    try {
+      const checkIn = await getTodayCheckIn();
+
+      setTodayCheckIn(checkIn);
+    } 
+    
+    catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "NOT_FOUND"
+      ) {
+        setTodayCheckIn(null);
+      } 
+      
+      else {
+        console.error(
+          "Failed to load today's check-in:",
+          error
+        );
+      }
+    } 
+    
+    finally {
+      setCheckInLoading(false);
     }
   };
 
@@ -184,6 +234,62 @@ export default function HomeScreen() {
             One day at a time. You've got this.
           </Text>
         </View>
+
+        {/* Daily check-in */}
+        <Text style={styles.sectionTitle}>
+          Today's progress
+        </Text>
+
+        <Card>
+          {checkInLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+            />
+          ) : todayCheckIn ? (
+            <View>
+              <Text style={styles.checkInTitle}>
+                Today's check-in is complete
+              </Text>
+
+              <Text style={styles.checkInValue}>
+                {todayCheckIn.cigarettesSmoked}
+              </Text>
+
+              <Text style={styles.checkInLabel}>
+                cigarettes smoked
+              </Text>
+
+              {todayCheckIn.note ? (
+                <Text style={styles.checkInNote}>
+                  {todayCheckIn.note}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.checkInTitle}>
+                You haven't checked in today
+              </Text>
+
+              <Text style={styles.checkInDescription}>
+                Take a moment to record how your day went.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.checkInButton}
+                onPress={() =>
+                  navigation.navigate("DailyCheckIn")
+                }
+                activeOpacity={0.8}
+              >
+                <Text style={styles.checkInButtonText}>
+                  Complete today's check-in
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </Card>
 
         {/* Plan statistics */}
         <Text style={styles.sectionTitle}>
@@ -414,5 +520,52 @@ const styles = StyleSheet.create({
     color: "#FF6B6B",
     fontSize: 15,
     fontWeight: "600",
+  },
+
+  checkInTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  checkInDescription: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+  },
+
+  checkInValue: {
+    color: colors.primary,
+    fontSize: 32,
+    fontWeight: "800",
+    marginTop: spacing.md,
+  },
+
+  checkInLabel: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    marginTop: 2,
+  },
+
+  checkInNote: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: spacing.md,
+  },
+
+  checkInButton: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+
+  checkInButtonText: {
+    color: colors.background,
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

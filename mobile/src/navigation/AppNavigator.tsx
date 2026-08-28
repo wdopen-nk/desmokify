@@ -19,6 +19,7 @@ import WelcomeScreen from "../screens/WelcomeScreen";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
+import DailyCheckInScreen from "../screens/DailyCheckInScreen";
 
 import { colors } from "../theme/colors";
 
@@ -27,6 +28,7 @@ type RootStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
+  DailyCheckIn: undefined;
 };
 
 const Stack =
@@ -103,6 +105,14 @@ export default function AppNavigator() {
             component={HomeScreen}
             options={{
               headerShown: false,
+            }}
+          />
+
+          <Stack.Screen
+            name="DailyCheckIn"
+            component={DailyCheckInScreen}
+            options={{
+              title: "Daily check-in",
             }}
           />
         </Stack.Navigator>
