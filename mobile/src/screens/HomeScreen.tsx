@@ -1,111 +1,130 @@
-import React, { useEffect, useState } from "react";
-import {
-  NavigationProp,
-  useNavigation,
-} from "@react-navigation/native";
-
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import {
   ActivityIndicator,
+  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert
 } from "react-native";
 
-import { getTodayCheckIn } from "../api/dailyCheckIns";
-import { getQuitPlan } from "../api/quitPlans";
+import {
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
 
-import { QuitPlan } from "../types/quitPlan";
-import { DailyCheckIn } from "../types/dailyCheckIn";
+import {
+  getQuitPlan,
+} from "../api/quitPlans";
 
+import {
+  getDailyCheckInStatistics,
+  getTodayCheckIn,
+} from "../api/dailyCheckIns";
 
-import { useAuth } from "../context/AuthContext";
+import {
+  DailyCheckInStatistics,
+} from "../types/dailyCheckIn";
+
+import {
+  QuitPlan,
+} from "../types/quitPlan";
+
+import {
+  useAuth,
+} from "../context/AuthContext";
 
 import Card from "../components/Card";
+import Button from "../components/Button";
+
 import CreateQuitPlanScreen from "./QuitPlanScreen";
 
-import { colors } from "../theme/colors";
-import { spacing } from "../theme/spacing";
+import {
+  colors,
+} from "../theme/colors";
 
-type HomeNavigationParamList = {
-  DailyCheckIn: undefined;
-};
+import {
+  spacing,
+} from "../theme/spacing";
 
 export default function HomeScreen() {
-  const { logout } = useAuth();
+  const {
+    user,
+    logout,
+  } = useAuth();
+
   const navigation =
-    useNavigation<NavigationProp<HomeNavigationParamList>>();
+    useNavigation<any>();
 
-  const [quitPlan, setQuitPlan] =
-    useState<QuitPlan | null>(null);
+  const [
+    quitPlan,
+    setQuitPlan,
+  ] = useState<QuitPlan | null>(null);
 
-  const [todayCheckIn, setTodayCheckIn] =
-  useState<DailyCheckIn | null>(null);
+  const [
+    statistics,
+    setStatistics,
+  ] = useState<DailyCheckInStatistics | null>(null);
 
-  const [checkInLoading, setCheckInLoading] =
-    useState(true);
+  const [
+    hasCheckedInToday,
+    setHasCheckedInToday,
+  ] = useState(false);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [showEditPlan, setShowEditPlan] =
-    useState(false);
+  const [
+    showEditPlan,
+    setShowEditPlan,
+  ] = useState(false);
 
-  useEffect(() => {
-    loadQuitPlan();
-    loadTodayCheckIn();
-  }, []);
+  const loadDashboard =
+    useCallback(async () => {
+      try {
+        setLoading(true);
 
-  const loadQuitPlan = async () => {
-    try {
-      const plan = await getQuitPlan();
+        const plan =
+          await getQuitPlan();
 
-      setQuitPlan(plan);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "NOT_FOUND"
-      ) {
-        setQuitPlan(null);
-      } else {
-        console.error(error);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+        setQuitPlan(plan);
 
-  const loadTodayCheckIn = async () => {
-    try {
-      const checkIn = await getTodayCheckIn();
+        const [
+          stats,
+          todayCheckIn,
+        ] = await Promise.all([
+          getDailyCheckInStatistics(),
+          getTodayCheckIn().catch(() => null),
+        ]);
 
-      setTodayCheckIn(checkIn);
-    } 
-    
-    catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "NOT_FOUND"
-      ) {
-        setTodayCheckIn(null);
-      } 
-      
-      else {
+        setStatistics(stats);
+        setHasCheckedInToday(
+          todayCheckIn !== null
+        );
+      } catch (error) {
         console.error(
-          "Failed to load today's check-in:",
+          "Failed to load dashboard:",
           error
         );
+      } finally {
+        setLoading(false);
       }
-    } 
-    
-    finally {
-      setCheckInLoading(false);
-    }
-  };
+    }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -127,11 +146,6 @@ export default function HomeScreen() {
                 "Logout failed:",
                 error
               );
-
-              Alert.alert(
-                "Logout failed",
-                "Something went wrong while logging out."
-              );
             }
           },
         },
@@ -139,13 +153,11 @@ export default function HomeScreen() {
     );
   };
 
-
-  /*
-   * Initial loading state
-   */
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
+      <SafeAreaView
+        style={styles.center}
+      >
         <ActivityIndicator
           size="large"
           color={colors.primary}
@@ -154,54 +166,49 @@ export default function HomeScreen() {
     );
   }
 
-  /*
-   * No quit plan exists yet.
-   *
-   * This is CREATE mode.
-   */
   if (!quitPlan) {
     return (
       <CreateQuitPlanScreen
         editMode={false}
         onPlanCreated={() => {
-          loadQuitPlan();
+          loadDashboard();
         }}
       />
     );
   }
 
-  /*
-   * User is editing an existing quit plan.
-   *
-   * This is EDIT mode.
-   */
   if (showEditPlan) {
     return (
       <CreateQuitPlanScreen
         editMode={true}
         onPlanCreated={() => {
           setShowEditPlan(false);
-          loadQuitPlan();
+          loadDashboard();
         }}
       />
     );
   }
 
-  /*
-   * Display the quit plan dashboard.
-   */
+  const quitDate =
+    new Date(
+      quitPlan.quitDate
+    ).toLocaleDateString();
 
-  const quitDate = new Date(
-    quitPlan.quitDate
-  ).toLocaleDateString();
+  const firstName =
+    user?.name?.split(" ")[0] || "there";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={styles.safeArea}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.brand}>
@@ -209,146 +216,208 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.greeting}>
-              Your journey starts here.
-            </Text>
-          </View>
-
-          <View style={styles.status}>
-            <Text style={styles.statusIcon}>
-              🚭
+              Good to see you, {firstName}.
             </Text>
           </View>
         </View>
 
-        {/* Quit date */}
-        <View style={styles.hero}>
-          <Text style={styles.heroLabel}>
-            QUIT DATE
-          </Text>
+        {/* Days since quit */}
+        <View style={styles.section}>
+          <View style={styles.hero}>
+            <Text style={styles.heroLabel}>
+              DAYS SINCE QUIT
+            </Text>
 
-          <Text style={styles.heroDate}>
-            {quitDate}
-          </Text>
+            <Text style={styles.heroValue}>
+              {statistics?.daysSinceQuit ?? 0}
+            </Text>
 
-          <Text style={styles.heroText}>
-            One day at a time. You've got this.
-          </Text>
+            <Text style={styles.heroDescription}>
+              Keep going. Every smoke-free
+              day adds to your progress.
+            </Text>
+          </View>
         </View>
 
-        {/* Daily check-in */}
-        <Text style={styles.sectionTitle}>
-          Today's progress
-        </Text>
-
-        <Card>
-          {checkInLoading ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-            />
-          ) : todayCheckIn ? (
-            <View>
-              <Text style={styles.checkInTitle}>
-                Today's check-in is complete
-              </Text>
-
-              <Text style={styles.checkInValue}>
-                {todayCheckIn.cigarettesSmoked}
-              </Text>
-
-              <Text style={styles.checkInLabel}>
-                cigarettes smoked
-              </Text>
-
-              {todayCheckIn.note ? (
-                <Text style={styles.checkInNote}>
-                  {todayCheckIn.note}
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View>
-              <Text style={styles.checkInTitle}>
-                You haven't checked in today
-              </Text>
-
-              <Text style={styles.checkInDescription}>
-                Take a moment to record how your day went.
-              </Text>
-
-              <TouchableOpacity
-                style={styles.checkInButton}
-                onPress={() =>
-                  navigation.navigate("DailyCheckIn")
-                }
-                activeOpacity={0.8}
-              >
-                <Text style={styles.checkInButtonText}>
-                  Complete today's check-in
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </Card>
-
-        {/* Plan statistics */}
-        <Text style={styles.sectionTitle}>
-          Your plan
-        </Text>
-
-        <View style={styles.statsGrid}>
-          <Card>
-            <Text style={styles.statIcon}>
-              🚬
-            </Text>
-
-            <Text style={styles.statValue}>
-              {quitPlan.cigarettesPerDay}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              cigarettes/day
-            </Text>
-          </Card>
+        {/* Today's check-in */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Today's check-in
+          </Text>
 
           <Card>
-            <Text style={styles.statIcon}>
-              📦
-            </Text>
+            <View style={styles.checkInHeader}>
+              <View>
+                <Text style={styles.cardTitle}>
+                  {hasCheckedInToday
+                    ? "Check-in completed"
+                    : "How did today go?"}
+                </Text>
 
-            <Text style={styles.statValue}>
-              {quitPlan.cigarettesPerPack}
-            </Text>
+                <Text style={styles.cardDescription}>
+                  {hasCheckedInToday
+                    ? "Your progress for today has been recorded."
+                    : "Record today's cigarettes to keep your statistics accurate."}
+                </Text>
+              </View>
 
-            <Text style={styles.statLabel}>
-              cigarettes/pack
-            </Text>
+              <View
+                style={[
+                  styles.statusIndicator,
+                  hasCheckedInToday
+                    ? styles.statusComplete
+                    : styles.statusPending,
+                ]}
+              />
+            </View>
+
+            {!hasCheckedInToday && (
+              <View style={styles.checkInButton}>
+                <Button
+                  title="Complete today's check-in"
+                  onPress={() =>
+                    navigation.navigate("DailyCheckIn")
+                  }
+                />
+              </View>
+            )}
           </Card>
         </View>
 
-        {/* Price */}
-        <Card>
-          <View style={styles.priceRow}>
-            <View>
-              <Text style={styles.statLabel}>
-                Price per pack
+        {/* Your progress */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Your progress
+          </Text>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statWrapper}>
+              <Card>
+                <Text style={styles.statValue}>
+                  {statistics?.smokeFreeDays ?? 0}
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Smoke-free days
+                </Text>
+              </Card>
+            </View>
+
+            <View style={styles.statWrapper}>
+              <Card>
+                <Text style={styles.statValue}>
+                  {statistics?.currentStreak ?? 0}
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Current streak
+                </Text>
+              </Card>
+            </View>
+
+            <View style={styles.statWrapper}>
+              <Card>
+                <Text style={styles.statValue}>
+                  {statistics?.longestStreak ?? 0}
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Longest streak
+                </Text>
+              </Card>
+            </View>
+
+            <View style={styles.statWrapper}>
+              <Card>
+                <Text style={styles.statValue}>
+                  {statistics?.cigarettesAvoided ?? 0}
+                </Text>
+
+                <Text style={styles.statLabel}>
+                  Cigarettes avoided
+                </Text>
+              </Card>
+            </View>
+          </View>
+        </View>
+
+        {/* Money saved */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Money saved
+          </Text>
+
+          <Card>
+            <Text style={styles.moneyValue}>
+              {statistics?.moneySaved?.toFixed(2) ?? "0.00"}
+            </Text>
+
+            <Text style={styles.moneyDescription}>
+              Based on your current quit plan.
+            </Text>
+          </Card>
+        </View>
+
+        {/* Quit plan */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Quit plan
+          </Text>
+
+          <Card>
+            <View style={styles.planRow}>
+              <Text style={styles.planLabel}>
+                Quit date
               </Text>
 
-              <Text style={styles.price}>
-                {quitPlan.packPrice}
+              <Text style={styles.planValue}>
+                {quitDate}
               </Text>
             </View>
 
-            <Text style={styles.moneyIcon}>
-              💰
-            </Text>
-          </View>
-        </Card>
+            <View style={styles.divider} />
 
-        {/* Edit */}
+            <View style={styles.planRow}>
+              <Text style={styles.planLabel}>
+                Cigarettes per day
+              </Text>
+
+              <Text style={styles.planValue}>
+                {quitPlan.cigarettesPerDay}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.planRow}>
+              <Text style={styles.planLabel}>
+                Cigarettes per pack
+              </Text>
+
+              <Text style={styles.planValue}>
+                {quitPlan.cigarettesPerPack}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.planRow}>
+              <Text style={styles.planLabel}>
+                Pack price
+              </Text>
+
+              <Text style={styles.planValue}>
+                {quitPlan.packPrice.toFixed(2)}
+              </Text>
+            </View>
+          </Card>
+        </View>
+
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => setShowEditPlan(true)}
+          onPress={() =>
+            setShowEditPlan(true)
+          }
           activeOpacity={0.7}
         >
           <Text style={styles.editButtonText}>
@@ -373,14 +442,16 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor:
+      colors.background,
   },
 
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.background,
+    backgroundColor:
+      colors.background,
   },
 
   content: {
@@ -389,9 +460,6 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: spacing.xl,
   },
 
@@ -400,26 +468,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 3,
+    marginBottom: 8,
   },
 
   greeting: {
     color: colors.text,
     fontSize: 24,
     fontWeight: "700",
-    marginTop: 8,
-  },
-
-  status: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.surfaceLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  statusIcon: {
-    fontSize: 23,
   },
 
   hero: {
@@ -428,7 +483,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 22,
     padding: 24,
-    marginBottom: spacing.xl,
   },
 
   heroLabel: {
@@ -438,17 +492,24 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  heroDate: {
+  heroValue: {
     color: colors.text,
-    fontSize: 32,
+    fontSize: 56,
+    lineHeight: 64,
     fontWeight: "800",
-    marginTop: 8,
+    marginTop: 6,
   },
 
-  heroText: {
+  heroDescription: {
     color: colors.textSecondary,
     fontSize: 15,
-    marginTop: 10,
+    lineHeight: 22,
+    marginTop: 8,
+    maxWidth: 280,
+  },
+
+  section: {
+    marginBottom: 28,
   },
 
   sectionTitle: {
@@ -458,44 +519,106 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  statsGrid: {
+  checkInHeader: {
     flexDirection: "row",
-    gap: spacing.md,
-    marginBottom: spacing.md,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
 
-  statIcon: {
-    fontSize: 22,
+  cardTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  cardDescription: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+    maxWidth: 275,
+  },
+
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+
+  statusComplete: {
+    backgroundColor:
+      colors.primary,
+  },
+
+  statusPending: {
+    backgroundColor:
+      colors.warning,
+  },
+
+  checkInButton: {
+    marginTop: spacing.lg,
+  },
+
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -6,
+  },
+
+  statWrapper: {
+    width: "50%",
+    paddingHorizontal: 6,
     marginBottom: 12,
   },
 
   statValue: {
     color: colors.text,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
   },
 
   statLabel: {
     color: colors.textSecondary,
-    fontSize: 14,
-    marginTop: 4,
-  },
-
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  price: {
-    color: colors.primary,
-    fontSize: 26,
-    fontWeight: "800",
+    fontSize: 13,
+    lineHeight: 18,
     marginTop: 5,
   },
 
-  moneyIcon: {
-    fontSize: 30,
+  moneyValue: {
+    color: colors.primary,
+    fontSize: 36,
+    fontWeight: "800",
+  },
+
+  moneyDescription: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    marginTop: 5,
+  },
+
+  planRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    minHeight: 42,
+  },
+
+  planLabel: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    flex: 1,
+  },
+
+  planValue: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
   },
 
   editButton: {
@@ -511,61 +634,14 @@ const styles = StyleSheet.create({
   },
 
   logoutButton: {
-  marginTop: spacing.sm,
-  alignItems: "center",
-  paddingVertical: 14,
+    marginTop: spacing.sm,
+    alignItems: "center",
+    paddingVertical: 14,
   },
 
   logoutButtonText: {
-    color: "#FF6B6B",
+    color: colors.danger,
     fontSize: 15,
     fontWeight: "600",
-  },
-
-  checkInTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: "700",
-  },
-
-  checkInDescription: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 6,
-  },
-
-  checkInValue: {
-    color: colors.primary,
-    fontSize: 32,
-    fontWeight: "800",
-    marginTop: spacing.md,
-  },
-
-  checkInLabel: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    marginTop: 2,
-  },
-
-  checkInNote: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: spacing.md,
-  },
-
-  checkInButton: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-
-  checkInButtonText: {
-    color: colors.background,
-    fontSize: 15,
-    fontWeight: "700",
   },
 });

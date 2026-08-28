@@ -114,7 +114,7 @@ export default function LoginScreen() {
           </View>
 
           <Text style={styles.quote}>
-            One day at a time. 🚭
+            One day at a time.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

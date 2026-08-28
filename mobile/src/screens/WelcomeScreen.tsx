@@ -12,6 +12,7 @@ import type {
 } from "@react-navigation/native-stack";
 
 import Button from "../components/Button";
+import Logo from "../components/Logo";
 
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
@@ -35,11 +36,7 @@ export default function WelcomeScreen({
       <View style={styles.container}>
 
         <View style={styles.hero}>
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}>
-              🚭
-            </Text>
-          </View>
+          <Logo size={78} />
 
           <Text style={styles.brand}>
             DESMOKIFY
@@ -104,22 +101,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  iconContainer: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: colors.surfaceLight,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xl,
-  },
-
-  icon: {
-    fontSize: 38,
   },
 
   brand: {
