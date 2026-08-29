@@ -1,7 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
 const API_URL =
-  "https://settle-articles-appointments-kinda.trycloudflare.com"
+  "https://app-navigate-insights-format.trycloudflare.com"
 
 export async function apiRequest<T>(
   endpoint: string,

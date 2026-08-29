@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: desmokify-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: desmokify
+      POSTGRES_USER: desmokify
+      POSTGRES_PASSWORD: desmokify_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - desmokify_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  desmokify_postgres_data:
